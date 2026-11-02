@@ -2,7 +2,7 @@
 
 Mesa de Blackjack como PWA: se instala como ícono en el teléfono y funciona sin conexión.
 
-**Jugar:** https://nosejugar.github.io/blackjack/
+**Jugar:** https://nosejugar.github.io/Blackjack/
 
 ## Reglas
 - Zapato de 6 mazos, se baraja cuando quedan menos de 75 cartas.
