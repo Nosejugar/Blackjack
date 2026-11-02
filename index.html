@@ -1,0 +1,324 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Blackjack</title>
+<meta name="theme-color" content="#0a2a23">
+<meta name="description" content="Mesa de Blackjack con zapato de 6 mazos.">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png" type="image/png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Blackjack">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bodoni+Moda:opsz,wght@6..96,500;6..96,700&family=Figtree:wght@400;600;700&display=swap">
+<style>
+/* Layout: una mesa de fieltro en una sola pantalla — crupier arriba, arco impreso al centro, jugador y fichas abajo */
+:root{
+  --felt:#0f3d33; --felt-deep:#0a2a23; --rail:#3a1f14; --ink:#f3ead6; --muted:#b9c7b8;
+  --gold:#d6a84a; --card:#fbf8f1; --red:#b8322a; --black:#1c1c1e;
+  --win:#7fd49a; --lose:#f08a7a;
+  --display:"Bodoni Moda", "Didot", Georgia, serif;
+  --body:"Figtree", system-ui, -apple-system, "Segoe UI", sans-serif;
+  color-scheme:dark;
+}
+*{-webkit-tap-highlight-color:transparent}
+:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);box-sizing:border-box;min-height:100%}
+html,body{height:100%}
+body{margin:0;font-size:14px;-webkit-user-select:none;user-select:none;overscroll-behavior:none}
+[hidden]{display:none!important}
+body{
+  background:radial-gradient(120% 80% at 50% 35%, var(--felt) 0%, var(--felt-deep) 75%);
+  color:var(--ink); font-family:var(--body);
+  padding-left:max(16px, env(safe-area-inset-left, 0px));
+  padding-right:max(16px, env(safe-area-inset-right, 0px));
+  padding-block:12px; box-sizing:border-box; overflow-x:hidden;
+}
+.table{max-width:720px; margin:0 auto; min-height:100%; display:flex; flex-direction:column; gap:14px}
+header{display:flex; justify-content:space-between; align-items:center; gap:12px}
+h1{font-family:var(--display); font-weight:700; font-size:1.35rem; margin:0; letter-spacing:.02em}
+.bank{font-variant-numeric:tabular-nums; text-align:right}
+.bank small{display:block; text-transform:uppercase; letter-spacing:.14em; font-size:.66rem; color:var(--muted)}
+.bank strong{font-family:var(--display); font-size:1.4rem; color:var(--gold)}
+
+.zone{display:flex; flex-direction:column; align-items:center; gap:8px}
+.label{font-size:.72rem; text-transform:uppercase; letter-spacing:.16em; color:var(--muted); display:flex; gap:8px; align-items:center}
+.score{font-variant-numeric:tabular-nums; background:rgba(0,0,0,.35); color:var(--ink); border-radius:999px; padding:2px 9px; letter-spacing:0; font-weight:700}
+.cards{display:flex; justify-content:center; min-height:112px; padding-left:34px}
+.card{
+  width:76px; height:108px; border-radius:8px; background:var(--card); margin-left:-34px;
+  box-shadow:0 2px 0 rgba(0,0,0,.15), 0 6px 14px rgba(0,0,0,.35);
+  position:relative; font-family:var(--display); font-weight:700; flex:none;
+  animation:deal .32s cubic-bezier(.2,.8,.3,1) both;
+}
+.card.r{color:var(--red)} .card.b{color:var(--black)}
+.card .c{position:absolute; line-height:.95; text-align:center; font-size:1.05rem}
+.card .tl{top:6px; left:7px} .card .br{bottom:6px; right:7px; transform:rotate(180deg)}
+.card .pip{position:absolute; inset:0; display:grid; place-items:center; font-size:2.3rem}
+.card.back{
+  background:
+    repeating-linear-gradient(45deg, rgba(214,168,74,.35) 0 2px, transparent 2px 9px),
+    repeating-linear-gradient(-45deg, rgba(214,168,74,.35) 0 2px, transparent 2px 9px),
+    var(--rail);
+  border:4px solid var(--card);
+  box-sizing:border-box;
+}
+@keyframes deal{from{transform:translate(40px,-60px) rotate(8deg); opacity:0}}
+
+.arc{
+  text-align:center; font-family:var(--display); color:var(--gold); opacity:.85;
+  border-top:1px solid rgba(214,168,74,.4); border-bottom:1px solid rgba(214,168,74,.4);
+  padding-block:6px; font-size:.78rem; letter-spacing:.18em; text-transform:uppercase;
+}
+.msg{min-height:1.6em; text-align:center; font-family:var(--display); font-size:1.4rem; text-wrap:balance}
+.msg.win{color:var(--win)} .msg.lose{color:var(--lose)} .msg.push{color:var(--ink)}
+
+.hands{display:flex; justify-content:center; gap:18px; flex-wrap:wrap}
+.hand{display:flex; flex-direction:column; align-items:center; gap:6px; padding:6px; border-radius:12px; border:1px solid transparent}
+.hand.active{border-color:rgba(214,168,74,.6); background:rgba(0,0,0,.12)}
+.hand .result{font-size:.75rem; text-transform:uppercase; letter-spacing:.12em; font-weight:700; min-height:1em}
+.result.win{color:var(--win)} .result.lose{color:var(--lose)} .result.push{color:var(--muted)}
+.betline{font-variant-numeric:tabular-nums; font-size:.82rem; color:var(--muted)}
+
+.controls{margin-top:auto; display:flex; flex-direction:column; gap:12px; padding-bottom:6px}
+.chips{display:flex; justify-content:center; gap:10px; flex-wrap:wrap}
+.chip{
+  width:58px; height:58px; border-radius:50%; border:none; cursor:pointer; color:#fff;
+  font-family:var(--body); font-weight:700; font-size:.95rem; position:relative;
+  background:var(--c); box-shadow:inset 0 0 0 4px rgba(255,255,255,.0), 0 4px 0 rgba(0,0,0,.35);
+  background-image:repeating-conic-gradient(rgba(255,255,255,.9) 0 10deg, transparent 10deg 45deg);
+}
+.chip::after{content:attr(data-v); position:absolute; inset:9px; border-radius:50%; background:var(--c); display:grid; place-items:center; border:2px dashed rgba(255,255,255,.55)}
+.chip:active{transform:translateY(2px)}
+.chip:disabled{opacity:.35; cursor:default}
+.betrow{display:flex; justify-content:center; align-items:center; gap:14px; font-variant-numeric:tabular-nums}
+.betrow strong{font-family:var(--display); font-size:1.3rem}
+.actions{display:grid; grid-template-columns:repeat(auto-fit, minmax(110px,1fr)); gap:8px}
+.btn{
+  font-family:var(--body); font-weight:700; font-size:1rem; padding:13px 10px; border-radius:10px; cursor:pointer;
+  border:1px solid rgba(214,168,74,.55); background:rgba(0,0,0,.28); color:var(--ink);
+}
+.btn.primary{background:var(--gold); color:var(--rail); border-color:var(--gold)}
+.btn.ghost{background:transparent; padding:6px 10px; font-size:.82rem; color:var(--muted); border-color:rgba(185,199,184,.35)}
+.btn:disabled{opacity:.35; cursor:default}
+button:focus-visible{outline:3px solid var(--gold); outline-offset:2px}
+.foot{display:flex; justify-content:space-between; font-size:.72rem; color:var(--muted); font-variant-numeric:tabular-nums}
+@media (max-width:420px){ .card{width:64px;height:92px;margin-left:-30px} .cards{min-height:96px;padding-left:30px} .card .pip{font-size:1.9rem} .chip{width:52px;height:52px} }
+@media (prefers-reduced-motion:reduce){ .card{animation:none} }
+</style>
+</head>
+<body>
+
+<div class="table">
+  <header>
+    <h1>Blackjack</h1>
+    <div class="bank"><small>Banca</small><strong id="bank">$1,000</strong></div>
+  </header>
+
+  <section class="zone" aria-label="Crupier">
+    <div class="label">Crupier <span class="score" id="dscore" hidden></span></div>
+    <div class="cards" id="dealer"></div>
+  </section>
+
+  <div class="arc">Blackjack paga 3 a 2 · El crupier se planta en todo 17</div>
+  <div class="msg" id="msg" aria-live="polite">Haz tu apuesta</div>
+
+  <section class="zone" aria-label="Jugador">
+    <div class="hands" id="hands"></div>
+  </section>
+
+  <div class="controls">
+    <div id="betPanel">
+      <div class="betrow">
+        <span>Apuesta <strong id="betAmt">$0</strong></span>
+        <button class="btn ghost" id="clearBet">Borrar</button>
+      </div>
+      <div class="chips" style="margin-top:10px">
+        <button class="chip" data-v="5" style="--c:#c9463d" aria-label="Ficha de 5"></button>
+        <button class="chip" data-v="25" style="--c:#2f7a4a" aria-label="Ficha de 25"></button>
+        <button class="chip" data-v="100" style="--c:#222" aria-label="Ficha de 100"></button>
+        <button class="chip" data-v="500" style="--c:#6b3fa0" aria-label="Ficha de 500"></button>
+      </div>
+    </div>
+    <div class="actions" id="actions"></div>
+    <div class="foot"><span id="shoeInfo">Zapato: 6 mazos</span><span id="stats">Manos: 0 · Ganadas: 0</span></div>
+  </div>
+</div>
+
+<script>
+const SUITS=[["♠","b"],["♥","r"],["♦","r"],["♣","b"]];
+const RANKS=["A","2","3","4","5","6","7","8","9","10","J","Q","K"];
+const DECKS=6;
+const $=id=>document.getElementById(id);
+const fmt=n=>"$"+n.toLocaleString("es-PE");
+const sleep=ms=>new Promise(r=>setTimeout(r,matchMedia("(prefers-reduced-motion:reduce)").matches?60:ms));
+
+let S={bank:1000, bet:0, lastBet:25, shoe:[], hands:[], active:0, dealer:[], phase:"bet", hole:true, played:0, won:0, busy:false};
+try{const s=JSON.parse(localStorage.getItem("bj-state")||"null"); if(s){S.bank=s.bank??1000; S.lastBet=s.lastBet??25; S.played=s.played??0; S.won=s.won??0;}}catch(e){}
+function save(){try{localStorage.setItem("bj-state",JSON.stringify({bank:S.bank,lastBet:S.lastBet,played:S.played,won:S.won}))}catch(e){}}
+
+function newShoe(){
+  const s=[];
+  for(let d=0;d<DECKS;d++) for(const [sym,col] of SUITS) for(const r of RANKS) s.push({r,sym,col});
+  for(let i=s.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1)); [s[i],s[j]]=[s[j],s[i]];}
+  S.shoe=s;
+}
+function draw(){ if(S.shoe.length===0) newShoe(); return S.shoe.pop(); }
+function cv(c){ return c.r==="A"?11:["J","Q","K"].includes(c.r)?10:+c.r; }
+function total(cards){
+  let t=0,a=0; for(const c of cards){t+=cv(c); if(c.r==="A")a++;}
+  while(t>21&&a){t-=10;a--;}
+  return {t, soft:a>0};
+}
+const isBJ=(cards,split)=>!split&&cards.length===2&&total(cards).t===21;
+
+function cardEl(c,hidden){
+  const d=document.createElement("div");
+  if(hidden){d.className="card back"; d.setAttribute("aria-label","Carta oculta"); return d;}
+  d.className="card "+c.col;
+  d.setAttribute("aria-label",c.r+" de "+c.sym);
+  d.innerHTML=`<span class="c tl">${c.r}<br>${c.sym}</span><span class="pip">${c.sym}</span><span class="c br">${c.r}<br>${c.sym}</span>`;
+  return d;
+}
+
+function render(){
+  $("bank").textContent=fmt(S.bank);
+  $("betAmt").textContent=fmt(S.bet);
+  $("stats").textContent=`Manos: ${S.played} · Ganadas: ${S.won}`;
+  $("shoeInfo").textContent=`Zapato: ${S.shoe.length} cartas`;
+  // dealer
+  const dz=$("dealer"); dz.innerHTML="";
+  S.dealer.forEach((c,i)=>dz.appendChild(cardEl(c, i===1&&S.hole)));
+  const ds=$("dscore");
+  if(S.dealer.length){ ds.hidden=false; ds.textContent=S.hole?cv(S.dealer[0]):total(S.dealer).t; } else ds.hidden=true;
+  // hands
+  const hz=$("hands"); hz.innerHTML="";
+  S.hands.forEach((h,i)=>{
+    const w=document.createElement("div");
+    w.className="hand"+(S.phase==="play"&&i===S.active&&S.hands.length>1?" active":"");
+    const {t,soft}=total(h.cards);
+    w.innerHTML=`<div class="label">${S.hands.length>1?"Mano "+(i+1):"Tú"} <span class="score">${soft&&t<21&&!h.done?(t-10)+"/"+t:t}</span></div>`;
+    const cs=document.createElement("div"); cs.className="cards";
+    h.cards.forEach(c=>cs.appendChild(cardEl(c)));
+    w.appendChild(cs);
+    const bl=document.createElement("div"); bl.className="betline"; bl.textContent="Apuesta "+fmt(h.bet)+(h.doubled?" · doblada":"");
+    w.appendChild(bl);
+    const r=document.createElement("div"); r.className="result "+(h.res||""); r.textContent=h.resText||"";
+    w.appendChild(r);
+    hz.appendChild(w);
+  });
+  // controls
+  const betting=S.phase==="bet"||S.phase==="done";
+  $("betPanel").hidden=!betting;
+  document.querySelectorAll(".chip").forEach(b=>b.disabled=S.busy||+b.dataset.v>S.bank-S.bet);
+  const A=$("actions"); A.innerHTML="";
+  const add=(txt,fn,ok=true,cls="")=>{const b=document.createElement("button"); b.className="btn "+cls; b.textContent=txt; b.disabled=!ok||S.busy; b.onclick=fn; A.appendChild(b);};
+  if(betting){
+    if(S.bank===0){ add("Recargar "+fmt(1000),()=>{S.bank=1000; save(); setMsg("Banca recargada. Haz tu apuesta"); render();},true,"primary"); return; }
+    add("Repetir "+fmt(Math.min(S.lastBet,S.bank)),()=>{const v=Math.min(S.lastBet,S.bank); S.bet=v; deal();}, S.lastBet>0);
+    add("Repartir",deal,S.bet>0,"primary");
+  } else if(S.phase==="play"){
+    const h=S.hands[S.active];
+    const two=h.cards.length===2;
+    add("Pedir",hit);
+    add("Plantarse",stand);
+    add("Doblar",doubleDown,two&&S.bank>=h.bet);
+    add("Dividir",split,two&&S.hands.length===1&&cv(h.cards[0])===cv(h.cards[1])&&S.bank>=h.bet);
+  }
+}
+function setMsg(t,cls=""){const m=$("msg"); m.textContent=t; m.className="msg "+cls;}
+
+document.querySelectorAll(".chip").forEach(b=>b.onclick=()=>{
+  const v=+b.dataset.v;
+  if(S.phase==="done"){ resetTable(); }
+  if(S.bet+v<=S.bank){ S.bet+=v; setMsg("Apuesta "+fmt(S.bet)); render(); }
+});
+$("clearBet").onclick=()=>{ if(S.phase==="done") resetTable(); S.bet=0; setMsg("Haz tu apuesta"); render(); };
+
+function resetTable(){ S.hands=[]; S.dealer=[]; S.hole=true; S.phase="bet"; }
+
+async function deal(){
+  if(S.bet<=0||S.bet>S.bank||S.busy) return;
+  if(S.shoe.length<75){ newShoe(); setMsg("Barajando el zapato…"); await sleep(500); }
+  resetTable();
+  S.lastBet=S.bet; S.bank-=S.bet;
+  S.hands=[{cards:[],bet:S.bet,done:false}]; S.active=0; S.bet=0;
+  S.phase="play"; S.busy=true; setMsg("");
+  for(let i=0;i<2;i++){ S.hands[0].cards.push(draw()); render(); await sleep(260); S.dealer.push(draw()); render(); await sleep(260); }
+  S.busy=false;
+  const pBJ=isBJ(S.hands[0].cards), dBJ=isBJ(S.dealer);
+  if(pBJ||dBJ){ S.hands[0].done=true; await finish(); return; }
+  render();
+}
+
+async function hit(){
+  const h=S.hands[S.active]; if(S.busy) return;
+  h.cards.push(draw()); render();
+  const t=total(h.cards).t;
+  if(t>21){ h.done=true; h.res="lose"; h.resText="Te pasaste"; await sleep(350); next(); }
+  else if(t===21){ h.done=true; await sleep(250); next(); }
+}
+function stand(){ S.hands[S.active].done=true; next(); }
+async function doubleDown(){
+  const h=S.hands[S.active];
+  S.bank-=h.bet; h.bet*=2; h.doubled=true;
+  h.cards.push(draw()); h.done=true;
+  if(total(h.cards).t>21){ h.res="lose"; h.resText="Te pasaste"; }
+  render(); await sleep(400); next();
+}
+async function split(){
+  const h=S.hands[0];
+  S.bank-=h.bet;
+  const aces=h.cards[0].r==="A";
+  S.hands=[{cards:[h.cards[0]],bet:h.bet,done:false,split:true},{cards:[h.cards[1]],bet:h.bet,done:false,split:true}];
+  S.busy=true; render();
+  for(const x of S.hands){ await sleep(260); x.cards.push(draw()); render(); }
+  S.busy=false;
+  if(aces){ S.hands.forEach(x=>x.done=true); }
+  S.hands.forEach(x=>{ if(total(x.cards).t===21) x.done=true; });
+  S.active=0; next();
+}
+function next(){
+  const i=S.hands.findIndex(h=>!h.done);
+  if(i===-1){ finish(); return; }
+  S.active=i; render();
+}
+
+async function finish(){
+  S.busy=true; S.phase="dealer"; S.hole=false; render(); await sleep(450);
+  const live=S.hands.some(h=>total(h.cards).t<=21);
+  const pBJonly=S.hands.length===1&&isBJ(S.hands[0].cards);
+  if(live&&!pBJonly&&!isBJ(S.dealer)){
+    while(total(S.dealer).t<17){ S.dealer.push(draw()); render(); await sleep(520); }
+  }
+  const d=total(S.dealer).t, dBJ=isBJ(S.dealer);
+  let net=0;
+  for(const h of S.hands){
+    const p=total(h.cards).t, bj=isBJ(h.cards,h.split);
+    let pay=0;
+    if(p>21){ h.res="lose"; h.resText="Te pasaste"; }
+    else if(bj&&!dBJ){ pay=h.bet*2.5; h.res="win"; h.resText="¡Blackjack!"; }
+    else if(dBJ&&!bj){ h.res="lose"; h.resText="Blackjack del crupier"; }
+    else if(bj&&dBJ){ pay=h.bet; h.res="push"; h.resText="Empate"; }
+    else if(d>21||p>d){ pay=h.bet*2; h.res="win"; h.resText=d>21?"El crupier se pasó":"Ganas"; }
+    else if(p===d){ pay=h.bet; h.res="push"; h.resText="Empate"; }
+    else { h.res="lose"; h.resText="Pierdes"; }
+    S.bank+=pay; net+=pay-h.bet;
+    S.played++; if(h.res==="win") S.won++;
+  }
+  S.bank=Math.round(S.bank*100)/100;
+  if(net>0) setMsg("Ganas "+fmt(net),"win");
+  else if(net<0) setMsg("Pierdes "+fmt(-net),"lose");
+  else setMsg("Empate","push");
+  S.phase="done"; S.busy=false; save(); render();
+}
+
+newShoe(); render();
+if("serviceWorker" in navigator){ addEventListener("load",()=>navigator.serviceWorker.register("sw.js").catch(()=>{})); }
+</script>
+
+</body>
+</html>
